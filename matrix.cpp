@@ -60,6 +60,7 @@ public:
 		Simplify();
 	}
 	void Simplify(){
+		//if(down == 0)down = 1;
 		if(up == 0)return;
 		bool minus = false;
 		if(up < 0){
@@ -89,11 +90,23 @@ public:
 		temp.Simplify();
 		return temp;
 	}
+	Fraction operator+(const int &i){
+		Fraction temp;
+		temp.up = up + down * i;
+		temp.Simplify();
+		return temp;
+	}
 
 	Fraction operator-(const Fraction &right){ 
 		Fraction temp;
 		temp.up = up * right.down - right.up * down;
 		temp.down = down * right.down;
+		temp.Simplify();
+		return temp;
+	}
+	Fraction operator-(const int &i){ 
+		Fraction temp;
+		temp.up = up - down * i; 
 		temp.Simplify();
 		return temp;
 	}
@@ -105,11 +118,23 @@ public:
 		temp.Simplify();
 		return temp;
 	}
+	Fraction operator*(const int &i){
+		Fraction temp;
+		temp.up = up * i;
+		temp.Simplify();
+		return temp;
+	}
 
 	Fraction operator/(const Fraction &right){ 
 		Fraction temp;
 		temp.up = up * right.down;
 		temp.down = down * right.up;
+		temp.Simplify();
+		return temp;
+	}
+	Fraction operator/(const int &i){
+		Fraction temp;
+		temp.down *= i;
 		temp.Simplify();
 		return temp;
 	}
@@ -200,23 +225,31 @@ public:
 		}
 	}
 	Matrix(){
+		row = col = 0;
 	}
 	~Matrix(){
-		//delete [] datas;
-	}
-
-	Matrix<T> & operator= (const Matrix<T> & right){
+		//if(row>0)delete [] datas;
+	} 
+/*
+	Matrix<T>& operator= (const Matrix<T> & right){
 		if(this == &right)return *this;
 		int msize = right.row*right.col;
-		delete [] datas;
+		//if(row>0)delete [] datas;
 		datas = new T(msize);
 		row = right.row;
 		col = right.col;
-
 		for(int i = 0;i<msize;i++)
 			datas[i] = right.datas[i];
-
 		return *this;
+	}
+	*/
+	void CopyTo(Matrix<T> *target){
+		int msize = row*col;
+		target->datas = new T(msize);
+		target->row = row;
+		target->col = col;
+		for(int i = 0;i<msize;i++)
+			target->datas[i] = datas[i];
 	}
 
 	T * const operator[](const int k){
@@ -254,7 +287,8 @@ public:
 
 	//暂时不作矩阵检查
 	Matrix operator+(Matrix &right){
-		Matrix temp = *this;
+		Matrix temp;// = *this;
+		CopyTo(&temp);
 		for (int x = 0;x<col;x++){
 			for(int y = 0;y<row;y++){
 				temp[y][x]+=right[y][x];
@@ -263,7 +297,8 @@ public:
 		return temp;
 	}
 	Matrix operator-(Matrix &right){
-		Matrix temp = *this;
+		Matrix temp;// = *this;
+		CopyTo(&temp);
 		for (int x = 0;x<col;x++){
 			for(int y = 0;y<row;y++){
 				temp[y][x]-=right[y][x];
@@ -277,9 +312,11 @@ public:
 			for(int y=0;y<temp.row;y++){
 				T num = 0;//元素[y][x]
 				for (int z = 0;z<col;z++){
+					//cout<<(*this)[y][z]<<" * "<<right[z][x]<<" + ";
 					num += (*this)[y][z]*right[z][x];
 				}
 				temp[y][x] = num;
+				//cout<<endl;
 			}
 		}
 		return temp; 
@@ -307,10 +344,10 @@ public:
 	}
 	void REF(Matrix *ra){
 		//Row Echelon Form
-		Matrix& result = *ra;
 		int x,y,z;
 		z = 0;
-		result = (*this);
+		Matrix &result = *ra;
+		CopyTo(ra);
 		for(x = 0;x<col;x++){
 			for(y = z;y<row;y++){
 				if(result[y][x]!=0)break;
@@ -320,7 +357,29 @@ public:
 			for(int q = y+1;q<row;q++){
 				if(result[q][x]!=0){
 					T sc = -result[q][x]/result[z][x];
-					Replacement(q,z,sc);
+					result.Replacement(q,z,sc);
+				}
+			}
+			z++;
+		}
+	}
+	void RREF(Matrix *ra){
+		//Reduced Row Echelon Form
+		int x,y,z;
+		z = 0;
+		Matrix &result = *ra;
+		CopyTo(ra);
+		for(x = 0;x<col;x++){
+			for(y = z;y<row;y++){
+				if(result[y][x]!=0)break;
+			}
+			if(y == row)continue;
+			result.Interchange(z,y);
+			result.Scaling(z,T(1)/result[z][x]);
+			for(int q = 0;q<row;q++){
+				if(result[q][x]!=0&&q!=z){
+					T sc = -result[q][x];
+					result.Replacement(q,z,sc);
 				}
 			}
 			z++;
@@ -331,23 +390,35 @@ public:
 
 typedef Matrix<Fraction> mat;
 int main(){ 
-	mat a(2,2),b(2,2),c(2,2);
+	mat a(2,2),b(2,2),cz(2,2);
 	a.Set("8 5 -7 -5");
 	b.Set("1 1 -7/5 -8/5");
 	cout<<endl<<endl;
 	//a.Set("1 2 3 4");
 	//b.Set("5 6 7 8");
-	c = a*b;
+	cz = a*b;
 	fra fa("-7/5");
 	fra fb("5");
+	//cout<<cz<<endl<<"--------------"<<endl;
 	//cout<<fa<<endl;
 	//cout<<fb<<endl;
 	fra fc = fa*fb;
-	//mat d;
-	//a.REF(&d);
-	//cout<<d;
+
+	mat te(4,5);
+	//te.Set("1 0 3 0 2 0 1 0 -3 3 0 -2 3 2 1 3 0 0 7 -5");
+	te.Set("3 -6 0 0 0 0 0 3 -6 0 -1 2 0 0 0 0 0 -1 2 0");
+
+	mat dac(4,5);
+
+	//cout<<cz<<endl<<"--------------"<<endl;
+	te.RREF(&dac);
+	cout<<dac<<endl<<"--------------------------"<<endl;
+	te.REF(&dac);
+	cout<<dac<<endl<<"--------------------------"<<endl;
+	//cout<<cz<<endl<<"--------------"<<endl;
+	//cz = a*b;
 	//cout<<"eee"<<fc.up<<" "<<fc.down<<endl;
 	//cout<<fc<<endl<<"d"<<endl;
-	cout<<a<<endl<<" X "<<endl<<b<<endl<<" = "<<endl<<c<<endl;
+	cout<<a<<endl<<" X "<<endl<<b<<endl<<" = "<<endl<<cz<<endl;
 	return 0;
 }
