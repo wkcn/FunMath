@@ -1,3 +1,4 @@
+#define DEBUG_FUN_MATH 1
 #include<iostream>
 #include<vector>
 #include<string>
@@ -5,18 +6,23 @@
 //#include<cstdlib>
 using namespace std;
 int gcd(int a,int b){
+	
 	int c;
 	if(a<0)a=-a;
 	if(b<0)b=-b;
+	//取消递归算法，提升性能
 	if(a<b){
 		c = a;
 		a = b;
 		b = c;
 	}
-	if(b == 0)return a;
-	c = a%b;
-	if(c == 0)return b;
-	return gcd(b,c);
+	if(b == 0)return 1;
+	while(1){
+		a = a % b;
+		if(a == 0)return b;
+		b = b % a;
+		if(b == 0)return a;
+	}
 }
 int str2int(string s){
 	int q = 0;
@@ -57,10 +63,16 @@ public:
 			temp += str[i];
 		}
 		up = str2int(temp);
-		Simplify();
 	}
+	
+	Fraction(const char  ch[]){
+		string temp;
+		temp += ch;
+		*this = Fraction(temp);
+	}
+	
 	void Simplify(){
-		//if(down == 0)down = 1;
+		if(down == 0)down = 1;
 		if(up == 0)return;
 		bool minus = false;
 		if(up < 0){
@@ -78,7 +90,8 @@ public:
 		}
 		if(minus)up = -up;
 	}
-	 friend ostream & operator << (ostream &r,const Fraction &s){
+	friend ostream & operator << (ostream &r,Fraction &s){
+		s.Simplify();
 		r <<"\t"<< s.up;
 		if(s.down != 1 && s.up!= 0)r <<"/"<< s.down;
 		return r;
@@ -87,13 +100,13 @@ public:
 		Fraction temp;
 		temp.up = up * right.down + right.up * down;
 		temp.down = down * right.down;
-		temp.Simplify();
+		Simplify();
 		return temp;
 	}
 	Fraction operator+(const int &i){
 		Fraction temp;
 		temp.up = up + down * i;
-		temp.Simplify();
+		Simplify();
 		return temp;
 	}
 
@@ -101,13 +114,13 @@ public:
 		Fraction temp;
 		temp.up = up * right.down - right.up * down;
 		temp.down = down * right.down;
-		temp.Simplify();
+		Simplify();
 		return temp;
 	}
 	Fraction operator-(const int &i){ 
 		Fraction temp;
 		temp.up = up - down * i; 
-		temp.Simplify();
+		Simplify();
 		return temp;
 	}
 
@@ -115,13 +128,13 @@ public:
 		Fraction temp;
 		temp.up = up * right.up;
 		temp.down = down * right.down;
-		temp.Simplify();
+		Simplify();
 		return temp;
 	}
 	Fraction operator*(const int &i){
 		Fraction temp;
 		temp.up = up * i;
-		temp.Simplify();
+		Simplify();
 		return temp;
 	}
 
@@ -129,19 +142,20 @@ public:
 		Fraction temp;
 		temp.up = up * right.down;
 		temp.down = down * right.up;
-		temp.Simplify();
+		Simplify();
 		return temp;
 	}
 	Fraction operator/(const int &i){
 		Fraction temp;
 		temp.down *= i;
-		temp.Simplify();
+		Simplify();
 		return temp;
 	}
 
 	Fraction operator-(){
 		Fraction temp = (*this);
 		temp.up = -temp.up;
+		Simplify();
 		return temp;
 	}
 
@@ -201,6 +215,13 @@ public:
 		Fraction temp(str);
 		*this = temp;
 	} 
+
+	int GetInt(){
+		return up/down;
+	}
+	double GetDouble(){
+		return up*1.0/down;
+	}
 };
 
 
@@ -213,45 +234,45 @@ public:
 	int row;
 	int col;
 	T *datas;
+	
+	void SetSize(int r,int c){
+		row = r; col = c;
+		int msize = r*c;
+		if(datas != NULL)delete [] datas;
+		if(msize == 0)return;
+		datas = new T[msize];
+		for(int i = 0;i<msize;i++){
+			*(datas+i) = 0;
+		}
+	}
 
 	Matrix(int r,int c){
 		//先行后列
 		//A(r,c) datas[r][c]
 		row = r; col = c;
 		int msize = r*c;
+		if(msize == 0)return;
 		datas = new T[msize];
 		for(int i = 0;i<msize;i++){
 			*(datas+i) = 0;
 		}
-	}
+	} 
 	Matrix(){
 		row = col = 0;
+		datas = NULL;
 	}
 	~Matrix(){
 		//if(row>0)delete [] datas;
 	} 
-/*
-	Matrix<T>& operator= (const Matrix<T> & right){
-		if(this == &right)return *this;
-		int msize = right.row*right.col;
-		//if(row>0)delete [] datas;
-		datas = new T(msize);
-		row = right.row;
-		col = right.col;
-		for(int i = 0;i<msize;i++)
-			datas[i] = right.datas[i];
-		return *this;
-	}
-	*/
 	void CopyTo(Matrix<T> *target){
 		if(target == this)return;
 		int msize = row*col;
-		target->datas = new T(msize);
+		target->datas = new T[msize];
 		target->row = row;
 		target->col = col;
 		for(int i = 0;i<msize;i++)
 			target->datas[i] = datas[i];
-	} 
+	}  
 
 	T * const operator[](const int k){
 		return &datas[k*col];
@@ -268,23 +289,7 @@ public:
 	void Set(int r,int c,T num){
 		//出于数组储存需要,这里有(0,0)
 		(*this)[r][c]=num;
-	} 
-	void Set(string d){
-	 	int i = 0;
-	 	for(int y = 0;y<row;y++){
-			for(int x = 0;x<col;x++){
-				string temp;
-				while(i<d.length()){
-					if(d[i]!=' ')
-						temp += d[i];
-					else
-						if(temp.length()>0)break;
-					i++;
-	 			}
-				(*this)[y][x] = T(temp);
-	 		}
-	 	}
-	}
+	}  
 
 	//暂时不作矩阵检查
 	Matrix operator+(Matrix &right){
@@ -322,12 +327,45 @@ public:
 		}
 		return temp; 
   	}
+	
+	Matrix operator*(const T &num){
+		Matrix temp(row,col);
+		CopyTo(&temp);
+		int msize = col * row;
+		for(int i=0;i<msize;i++)
+			*(temp.datas+i) = num;
 
+		return temp;
+	}
+	Matrix& operator*=(const T &num){
+		int msize = col * row;
+		for(int i=0;i<msize;i++)
+			*(datas+i) *= num;
+
+		return *this;
+	}
+	Matrix operator/(const T &num){
+		Matrix temp(row,col);
+		CopyTo(&temp);
+		int msize = col * row;
+		for(int i=0;i<msize;i++)
+			*(temp.datas+i) /= num;
+
+		return temp;
+	}
+
+	Matrix& operator/=(const T &num){
+		int msize = col * row;
+		for(int i=0;i<msize;i++)
+			*(datas+i) /= num;
+
+		return *this;
+	}
 	// ELEMENTARY ROW OPERATIONS	
 	void Identity(){
 		for(int x = 0;x<col;x++){
 			for(int y = 0;y<row;y++){
-				datas[y][x] = (x==y)?T(1):T(0);
+				(*this)[y][x] = (x==y)?T(1):T(0);
 			}
 		}
 	}
@@ -352,7 +390,7 @@ public:
 	}
 
 	//无参数输入时，为自我进行REF
-	void REF(Matrix *result = NULL){
+	 void REF(Matrix *result = NULL){
 		//Row Echelon Form
 		int x,y,z;
 		z = 0;
@@ -360,8 +398,8 @@ public:
 
 		CopyTo(result);
 
-		for(x = 0;x<col;x++){
-			for(y = z;y<row;y++){
+	 	for(x = 0;x<col;x++){
+	 		for(y = z;y<row;y++){
 				if((*result)[y][x]!=0)break;
 			}
 			if(y == row)continue;
@@ -375,6 +413,7 @@ public:
 			z++;
 		}
 	}
+
 	void RREF(Matrix *result = NULL){
 		//Reduced Row Echelon Form
 		int x,y,z;
@@ -397,7 +436,74 @@ public:
 			}
 			z++;
 		}
+	} 
+
+	void Rotate180(Matrix<T> *result = NULL){
+		Matrix<T> *source;
+		if(result == NULL){
+			result = this;
+			source = new Matrix(row,col);
+			CopyTo(source);
+		}
+		else{
+			source = this;
+		}
+		for(int y=0;y<row;y++){
+			for(int x=0;x<col;x++){
+				(*result)[y][x] = (*source)[row-1-y][col-1-x];
+			}
+		}
 	}
+	
+	void Transpose(Matrix<T> *result = NULL){
+		Matrix<T> *source;
+		if(result == NULL){
+			result = this;
+			source = new Matrix(col,row);
+			CopyTo(source);
+		}
+		else{
+			source = this;
+		}
+		for(int y=0;y<row;y++){
+			for(int x=0;x<col;x++){
+				result[x][y] = (*source)[y][x];
+			}
+		}
+	}
+
+	void Convolution(Matrix<T> &mould,Matrix<T> *result = NULL){
+		Matrix<T> *source;
+		if(result == NULL){
+			result = this;
+			source = new Matrix(col,row);
+			CopyTo(source);
+		}
+		else{
+			source = this;
+		}
+		int newRow = row - mould.row + 1;
+		int newCol = col - mould.col + 1;
+		if(newCol < 1||newRow < 1){
+			result->SetSize(0,0);
+			//(*result)[0][0] = T(0);
+			return;
+		}
+		result->SetSize(newRow,newCol);
+		T sum;
+		for(int x = 0;x<newCol;x++){
+			for(int y = 0;y<newRow;y++){
+				sum = T(0);
+				for(int mx = 0;mx<mould.col;mx++){
+					for(int my = 0;my<mould.row;my++){
+						sum += mould[mould.row-1-my][mould.col-1-mx] * (*source)[y+my][x+mx];
+					}
+				}
+				(*result)[y][x] = sum;
+			}
+		}
+	}
+
 	bool Invert(Matrix *ra = NULL){
 		if(row!=col)return false;
 		Matrix &result = *ra;
@@ -433,9 +539,26 @@ public:
 	}
 }; 
 
-
-typedef Matrix<Fraction> mat;
+	void SetMatrix(Matrix<Fraction> * mat,string d){
+	 	int i = 0;
+	 	for(int y = 0;y<mat->row;y++){
+			for(int x = 0;x<mat->col;x++){
+				string temp;
+				while(i<d.length()){
+					if(d[i]!=' ')
+						temp += d[i];
+					else
+						if(temp.length()>0)break;
+					i++;
+	 			}
+				(*mat)[y][x] = temp;
+	 		}
+	 	}
+	}
+#if DEBUG_FUN_MATH
+typedef Matrix<int> mat;
 int main(){ 
+	/*
 	mat a(2,2),b(2,2),cz(2,2);
 	a.Set("8 5 -7 -5");
 	b.Set("1 1 -7/5 -8/5");
@@ -469,5 +592,23 @@ int main(){
 	//cout<<"eee"<<fc.up<<" "<<fc.down<<endl;
 	//cout<<fc<<endl<<"d"<<endl;
 	//cout<<a<<endl<<" X "<<endl<<b<<endl<<" = "<<endl<<cz<<endl;
+	fra att = "21/14";
+	cout<<att;
+	*/
+	mat a(5,5);
+	a.Identity();
+	//a.Set("1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25");
+	//mat b(3,3);
+	//b.Set("0 1/5 0 1/5 1/5 1/5 0 1/5 0");
+	cout<<a<<endl;
+	//cout<<b<<endl;
+	//a.Convolution(b);
+	//a*= 10;
+	cout<<"--------------\n"<<a<<endl;
+	mat d(8,8);
+	d.Identity();
+	d/=8;
+	cout<<d;
 	return 0;
 }
+#endif
